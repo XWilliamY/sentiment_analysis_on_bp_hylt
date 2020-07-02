@@ -92,14 +92,17 @@ def get_comments(**kwargs):
                 }
         else:
             count += 1
-            
+
+        index = 0
         for item in response['items']:
+            print(f"comment {index}")
+            index += 1
             comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
             comment_id = item['snippet']['topLevelComment']['id']
             reply_count = item['snippet']['totalReplyCount']
             like_count = item['snippet']['topLevelComment']['snippet']['likeCount']
 
-            viewer_rating = item['snippet']['topLevelComment']['snippet']['viewerRating']
+            viewer_rating = None
             
             comments.append(comment)
             commentsId.append(comment_id)
@@ -145,11 +148,13 @@ def main():
     parser.add_argument('--csv_filename', default=None)
     parser.add_argument('--token_filename', default=None)
     parser.add_argument('--video_url', default='https://www.youtube.com/watch?v=ioNng23DkIM')
+    parser.add_argument('--order', default='time')
+    parser.add_argument('--apikey', default='../apikey.json')
     args = parser.parse_args()
 
     # maybe use argparse or something idk
 
-    service = build_service('../apikey.json')
+    service = build_service(args.apikey)
     video_id = get_id(args.video_url)
     # part, maxResults, textFormat, iterations, service, write_lbl, csv_filename, token_filename
 
@@ -160,11 +165,14 @@ def main():
         args.token_filename = video_id + "_page_token"
 
     kwargs = vars(args)
+    kwargs.pop('apikey')
     kwargs.pop('video_url')
     kwargs['videoId'] = video_id
     kwargs['service'] = service
     output_dict = get_comments(**kwargs)
-    save_to_csv(output_dict, video_id)
+
+    args.csv_filename += "_final"
+    save_to_csv(output_dict, video_id, args.csv_filename)
     
 if __name__ == '__main__':
     # do the things
