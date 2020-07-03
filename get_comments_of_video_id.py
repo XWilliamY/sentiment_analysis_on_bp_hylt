@@ -76,8 +76,6 @@ def get_comments(**kwargs):
     write_lbl = kwargs.pop('write_lbl', True)
     csv_filename = kwargs.pop('csv_filename')
     token_filename = kwargs.pop('token_filename')
-
-    count = 0
     service = kwargs.pop('service')
     
     response = service.commentThreads().list(
@@ -85,7 +83,6 @@ def get_comments(**kwargs):
     ).execute()
 
     while response:
-        print(count)
         if iterations and count == iterations:
             return {
                 'Comments': comments,
@@ -94,8 +91,6 @@ def get_comments(**kwargs):
                 'Like Count' : likesCount,
                 'Commenter Rating Video' : viewerRating
                 }
-        else:
-            count += 1
 
         index = 0
         for item in response['items']:
