@@ -15,10 +15,14 @@ def get_keys(filename):
     return {'key': key, 'name': 'youtube', 'version': 'v3'}
 
 def build_service(filename):
-    api_dict = get_keys(filename)
-    return build(api_dict['name'],
-                 api_dict['version'],
-                 developerKey=api_dict['key'])
+    with open(filename) as f:
+        key = f.readline()
+
+    YOUTUBE_API_SERVICE_NAME = "youtube"
+    YOUTUBE_API_VERSION = "v3"
+    return build(YOUTUBE_API_SERVICE_NAME,
+                 YOUTUBE_API_VERSION,
+                 developerKey=key)
 
 def get_videos(**kwargs):
     final_results = []
@@ -152,11 +156,8 @@ def main():
     parser.add_argument('--apikey', default='../apikey.json')
     args = parser.parse_args()
 
-    # maybe use argparse or something idk
-
     service = build_service(args.apikey)
     video_id = get_id(args.video_url)
-    # part, maxResults, textFormat, iterations, service, write_lbl, csv_filename, token_filename
 
     if not args.csv_filename:
         args.csv_filename = video_id + "_csv"
@@ -177,3 +178,14 @@ def main():
 if __name__ == '__main__':
     # do the things
     main()
+
+
+
+response = service.commentThreads().list(
+    part='snippet',
+    maxResults=100,
+    textFormat='plainText',
+    order='time',
+    videoId='ioNng23DkIM',
+    nextPageToken=response['nextPageToken']
+  ).execute()
