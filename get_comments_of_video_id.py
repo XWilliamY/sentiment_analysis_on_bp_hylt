@@ -88,7 +88,7 @@ def get_comments(**kwargs):
             likesCount.append(like_count)
             updatedAt.append(updated_at)
 
-            if write_lbl == True:
+            if write_lbl:
                 with open(f'{csv_filename}.csv', 'a+') as f:
                     # https://thispointer.com/python-how-to-append-a-new-row-to-an-existing-csv-file/#:~:text=Open%20our%20csv%20file%20in,in%20the%20associated%20csv%20file
                     csv_writer = writer(f)
