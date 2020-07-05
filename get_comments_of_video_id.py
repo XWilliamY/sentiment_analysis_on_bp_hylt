@@ -24,31 +24,6 @@ def build_service(filename):
                  YOUTUBE_API_VERSION,
                  developerKey=key)
 
-def get_videos(**kwargs):
-    final_results = []
-    service = kwargs['service']
-
-    kwargs['part'] = kwargs.get('part', 'id,snippet')
-
-    search_response = service.videos().list(
-        **kwargs
-    ).execute()
-
-    i = 0
-    max_pages = 3
-    while search_response and i < max_pages:
-        final_results.extend(search_response['items'])
-
-        if 'nextPageToken' in search_response:
-            kwargs['pageToken'] = search_response['nextPageToken']
-            search_response = service.search().list(
-                **kwargs
-                ).execute()
-            i += 1
-        else:
-            break
-    return final_results
-
 # https://stackoverflow.com/questions/45579306/get-youtube-video-url-or-youtube-video-id-from-a-string-using-regex
 def get_id(url):
     u_pars = urlparse(url)
@@ -65,73 +40,79 @@ def get_comments(**kwargs):
     https://python.gotrained.com/youtube-api-extracting-comments/#Cache_Credentials
     https://www.pingshiuanchua.com/blog/post/using-youtube-api-to-analyse-youtube-comments-on-python
     """
-    comments, commentsId, repliesCount, likesCount, viewerRating = [], [], [], [], []
+
+    # edit these list declarations as needed
+    comments, commentsId, repliesCount, likesCount, updatedAt = [], [], [], [], []
 
     # clean kwargs
-    kwargs['part'] = kwargs.get('part', 'snippet')
+
+    # parameters needed for query
+    kwargs['part'] = kwargs.get('part', 'snippet').split()
     kwargs['maxResults'] = kwargs.get('maxResults', 100)
     kwargs['textFormat'] = kwargs.get('textFormat', 'plainText')
     kwargs['order'] = kwargs.get('order', 'time')
-    iterations = kwargs.pop('iterations', None)
+    service = kwargs.pop('service')
+
+    # other parameters for dealing with files
     write_lbl = kwargs.pop('write_lbl', True)
     csv_filename = kwargs.pop('csv_filename')
     token_filename = kwargs.pop('token_filename')
-    service = kwargs.pop('service')
-    
+
+
+    # get the first page of comments
     response = service.commentThreads().list(
         **kwargs
     ).execute()
 
+    # continue until we crash or reach the end
+    page = 0
     while response:
-        if iterations and count == iterations:
-            return {
-                'Comments': comments,
-                'Comment ID' : commentsId,
-                'Reply Count' : repliesCount,
-                'Like Count' : likesCount,
-                'Commenter Rating Video' : viewerRating
-                }
-
+        print(f'page {page}')
+        page += 1
         index = 0
         for item in response['items']:
             print(f"comment {index}")
             index += 1
+
+            # query different pieces of data from the JSON response
             comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
             comment_id = item['snippet']['topLevelComment']['id']
             reply_count = item['snippet']['totalReplyCount']
             like_count = item['snippet']['topLevelComment']['snippet']['likeCount']
+            updated_at = item['snippet']['topLevelComment']['snippet']['updatedAt']
 
-            viewer_rating = None
-            
+            # append to corresponding list
             comments.append(comment)
             commentsId.append(comment_id)
             repliesCount.append(reply_count)
             likesCount.append(like_count)
-            viewerRating.append(viewer_rating)
+            updatedAt.append(updated_at)
 
             if write_lbl == True:
                 with open(f'{csv_filename}.csv', 'a+') as f:
                     # https://thispointer.com/python-how-to-append-a-new-row-to-an-existing-csv-file/#:~:text=Open%20our%20csv%20file%20in,in%20the%20associated%20csv%20file
                     csv_writer = writer(f)
-                    csv_writer.writerow([comment, comment_id, reply_count, like_count, viewer_rating])
+                    csv_writer.writerow([comment, comment_id, reply_count, like_count, updated_at])
 
-            if 'nextPageToken' in response:
+        # check if there's a next page
+        if 'nextPageToken' in response:
+            with open(f'{token_filename}.txt', 'a+') as f:
+                f.write(kwargs.get('pageToken', ''))
+                f.write('\n')
+            kwargs['pageToken'] = response['nextPageToken']
+            response = service.commentThreads().list(
+                **kwargs
+            ).execute()
+        else:
+            break
 
-                with open(f'{token_filename}.txt', 'a+') as f:
-                    f.write(kwargs.get('pageToken', ''))
-                    f.write('\n')
-                kwargs['pageToken'] = response['nextPageToken']
-                response = service.commentThreads().list(
-                    **kwargs
-                ).execute()
-            else:
-                return {
-                    'Comments': comments,
-                    'Comment ID' : commentsId,
-                    'Reply Count' : repliesCount,
-                    'Like Count' : likesCount,
-                    'Commenter Rating Video' : viewerRating
-                }
+    return {
+        'Comments': comments,
+        'Comment ID' : commentsId,
+        'Reply Count' : repliesCount,
+        'Like Count' : likesCount,
+        'Updated At' : updatedAt
+    }
 
 def save_to_csv(output_dict, video_id, output_filename):
     output_df = pd.DataFrame(output_dict, columns = output_dict.keys())
@@ -142,7 +123,6 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--part', help='Desired properties of commentThread', default='snippet')
     parser.add_argument('--maxResults', help='Max results per page', default=100)
-    parser.add_argument('--iterations', help='How many pages to parse', default=None)
     parser.add_argument('--write_lbl', help="Update csv after each comment?", default=True)
     parser.add_argument('--csv_filename', default=None)
     parser.add_argument('--token_filename', default=None)
@@ -151,8 +131,11 @@ def main():
     parser.add_argument('--apikey', default='../apikey.json')
     args = parser.parse_args()
 
-    service = build_service(args.apikey)
-    video_id = get_id(args.video_url)
+    # build kwargs from args
+    kwargs = vars(args)
+
+    service = build_service(kwargs.pop('apikey'))
+    video_id = get_id(kwargs.pop('video_url'))
 
     if not args.csv_filename:
         args.csv_filename = video_id + "_csv"
@@ -160,9 +143,6 @@ def main():
     if not args.token_filename:
         args.token_filename = video_id + "_page_token"
 
-    kwargs = vars(args)
-    kwargs.pop('apikey')
-    kwargs.pop('video_url')
     kwargs['videoId'] = video_id
     kwargs['service'] = service
     output_dict = get_comments(**kwargs)
@@ -175,12 +155,3 @@ if __name__ == '__main__':
     main()
 
 
-
-response = service.commentThreads().list(
-    part='snippet',
-    maxResults=100,
-    textFormat='plainText',
-    order='time',
-    videoId='ioNng23DkIM',
-    nextPageToken=response['nextPageToken']
-  ).execute()
