@@ -10,9 +10,8 @@ Additional arguments include:
 
 | Command | Description |
 |-|-|
-| --part | Desired part of commentThread: id, snippet, and/or replies |
+| --part | Desired part of commentThread: id, snippet, and/or replies. Enter comma-separated string with no spaces. |
 | --maxResults | How many comments to "display" per API call |
-| --iterations | How many pages you'd like to parse |
 | --write_lbl | Whether to save comments to csv line-by-line as comments are sourced |
 | --csv_filename | Name of csv file that comments should be saved to |
 | --token_filename | This script also saves each pageToken: --token_filename will save these tokens to the specified filename |
