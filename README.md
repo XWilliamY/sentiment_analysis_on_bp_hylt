@@ -1,7 +1,17 @@
 # Sentiment Analysis on Blackpink's How You Like That MV
 
-To source YouTube comments from a video, run the following command:
 
+You should first set up a virtual environment. You can create a Python 3 virtual environment by entering the following command:
+``` python3 -m venv collect_comments ```
+
+collect_comments can be any name, it'll just be the name of your virtual environment. To activate it, run:
+
+``` source collect_comments/bin/activate ```
+
+Next, install all required libraries:
+``` pip3 install requirements.txt ```
+
+Now you can collect comments from a specific video url with the following command:
 ```
 python3 get_comments_of_video_id.py --order time --csv_filename csv_filename --apikey path/to/apikey.json
 ```
